@@ -15,7 +15,7 @@ export function ReceiveModal({
   onCopyAddress,
 }: ReceiveModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Receive USDC">
+    <Modal isOpen={isOpen} onClose={onClose} title="Receive">
       <div className="text-center space-y-6">
         <div
           className="p-6 rounded-lg inline-block backdrop-blur-xl"

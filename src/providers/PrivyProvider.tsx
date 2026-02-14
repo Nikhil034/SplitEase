@@ -23,7 +23,7 @@ const queryClient = new QueryClient();
 export function PrivyProvider({ children }: { children: React.ReactNode }) {
   return (
     <BasePrivyProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID}
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{
         loginMethods: ["email", "sms", "wallet"],
         defaultChain: tempo,
@@ -32,7 +32,7 @@ export function PrivyProvider({ children }: { children: React.ReactNode }) {
           theme: "dark",
         },
         embeddedWallets: {
-          ethereum: { createOnLogin: "users-without-wallets" },
+          ethereum: { createOnLogin: "all-users" },
           showWalletUIs: false,
         },
       }}

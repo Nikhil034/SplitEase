@@ -3,6 +3,8 @@ interface TransactionItemProps {
   amount: string;
   timestamp: string;
   memo?: string;
+  symbol?: string;
+  hash?: string;
 }
 
 export function TransactionItem({
@@ -10,6 +12,8 @@ export function TransactionItem({
   amount,
   timestamp,
   memo,
+  symbol = "",
+  hash,
 }: TransactionItemProps) {
   const isSend = type === "send";
   const iconColor = isSend
@@ -19,7 +23,7 @@ export function TransactionItem({
     ? "var(--text-secondary)"
     : "var(--accent-success-solid)";
 
-  return (
+  const content = (
     <div className="flex items-center justify-between py-3">
       <div className="flex items-center gap-4 flex-1">
         <div
@@ -77,8 +81,23 @@ export function TransactionItem({
         style={{ color: amountColor }}
       >
         {isSend ? "-" : "+"}
-        {amount}
+        {amount} {symbol}
       </span>
     </div>
   );
+
+  if (hash) {
+    return (
+      <a
+        href={`https://explore.tempo.xyz/tx/${hash}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block hover:bg-white/5 rounded-lg transition-colors -mx-2 px-2 cursor-pointer"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return content;
 }

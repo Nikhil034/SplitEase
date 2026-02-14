@@ -21,6 +21,7 @@ const publicClient = createPublicClient({
 
 export function useBalance(address: string | undefined) {
   const [balance, setBalance] = useState<string>("0.00");
+  const [symbol, setSymbol] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [hasInitialFetch, setHasInitialFetch] = useState(false);
 
@@ -34,18 +35,30 @@ export function useBalance(address: string | undefined) {
 
     const fetchBalance = async () => {
       try {
-        const balance = (await publicClient.readContract({
-          address: alphaUsd,
-          abi: Abis.tip20,
-          functionName: "balanceOf",
-          args: [address as Address],
-        })) as unknown as bigint;
+        const [balanceResult, decimalsResult, symbolResult] = await Promise.all([
+          publicClient.readContract({
+            address: alphaUsd,
+            abi: Abis.tip20,
+            functionName: "balanceOf",
+            args: [address as Address],
+          }),
+          publicClient.readContract({
+            address: alphaUsd,
+            abi: Abis.tip20,
+            functionName: "decimals",
+          }),
+          publicClient.readContract({
+            address: alphaUsd,
+            abi: Abis.tip20,
+            functionName: "symbol",
+          }),
+        ]);
 
-        const decimals = (await publicClient.readContract({
-          address: alphaUsd,
-          abi: Abis.tip20,
-          functionName: "decimals",
-        })) as unknown as number;
+        const balance = balanceResult as unknown as bigint;
+        const decimals = decimalsResult as unknown as number;
+        const tokenSymbol = symbolResult as unknown as string;
+
+        setSymbol(tokenSymbol);
 
         const formatted = formatUnits(balance, decimals);
         const number = parseFloat(formatted);
@@ -79,5 +92,5 @@ export function useBalance(address: string | undefined) {
     return () => clearInterval(interval);
   }, [address, hasInitialFetch]);
 
-  return { balance, loading };
+  return { balance, symbol, loading };
 }

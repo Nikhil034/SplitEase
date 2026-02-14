@@ -43,7 +43,7 @@ export function SendModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Send USDC">
+    <Modal isOpen={isOpen} onClose={onClose} title="Send">
       <div className="space-y-6">
         {txHash ? (
           <div className="text-center space-y-4">

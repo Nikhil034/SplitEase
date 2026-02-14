@@ -37,9 +37,10 @@ export function useSend() {
     setError(null);
     setTxHash(null);
 
-    const wallet = wallets[0];
+    // Use the Privy embedded wallet, not MetaMask
+    const wallet = wallets.find((w) => w.walletClientType === "privy");
     if (!wallet?.address) {
-      const errMsg = "No active wallet";
+      const errMsg = "No Privy embedded wallet found";
       setError(errMsg);
       setIsSending(false);
       throw new Error(errMsg);

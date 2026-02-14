@@ -14,12 +14,14 @@ interface RecentActivityProps {
   transactions: Transaction[];
   loading?: boolean;
   error?: string | null;
+  symbol?: string;
 }
 
 export function RecentActivity({
   transactions,
   loading = false,
   error = null,
+  symbol = "",
 }: RecentActivityProps) {
   return (
     <motion.div
@@ -67,6 +69,8 @@ export function RecentActivity({
                   amount={tx.amount}
                   timestamp={tx.timestamp}
                   memo={tx.memo}
+                  symbol={symbol}
+                  hash={tx.hash}
                 />
               </motion.div>
             ))

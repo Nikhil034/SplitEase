@@ -10,6 +10,7 @@ export { ActionButtonsGrid } from "./ActionButtonsGrid";
 export { RecentActivity } from "./RecentActivity";
 export { SendModal } from "./SendModal";
 export { ReceiveModal } from "./ReceiveModal";
+export { BatchSendModal } from "./BatchSendModal";
 export { WalletContainer } from "./WalletContainer";
 export { SkeletonCard } from "./SkeletonCard";
 export { SkeletonButton } from "./SkeletonButton";

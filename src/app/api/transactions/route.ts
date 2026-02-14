@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { TransactionEnvelopeTempo } from "tempo.ts/ox";
 
 const TEMPO_EXPLORER_API = "https://explore.tempo.xyz/api";
 const TEMPO_RPC = "https://rpc.moderato.tempo.xyz";
@@ -58,11 +59,12 @@ export async function GET(request: NextRequest) {
       error?: string | null;
     };
 
-    // Fetch timestamps for each transaction's block
+    // Fetch timestamps and decode Tempo transactions
     if (data.transactions && Array.isArray(data.transactions)) {
-      const transactionsWithTimestamps = await Promise.all(
+      const transactionsWithDetails = await Promise.all(
         data.transactions.map(async (tx) => {
           try {
+            // Fetch block timestamp
             const blockResponse = await fetch(TEMPO_RPC, {
               method: "POST",
               headers: {
@@ -81,12 +83,41 @@ export async function GET(request: NextRequest) {
               ? parseInt(blockData.result.timestamp, 16)
               : 0;
 
+            // For Tempo 0x76 transactions, fetch raw tx and decode calls
+            let calls: Array<{ to: string; value?: string; data?: string }> | undefined;
+            if (tx.type === "0x76") {
+              try {
+                const rawTxResponse = await fetch(TEMPO_RPC, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    jsonrpc: "2.0",
+                    method: "eth_getRawTransactionByHash",
+                    params: [tx.hash],
+                    id: 1,
+                  }),
+                });
+                const rawTxData = await rawTxResponse.json() as { result?: string };
+                if (rawTxData.result) {
+                  const decoded = TransactionEnvelopeTempo.deserialize(rawTxData.result);
+                  calls = decoded.calls?.map(c => ({
+                    to: c.to || "",
+                    value: c.value?.toString(),
+                    data: c.data,
+                  }));
+                }
+              } catch (err) {
+                console.error(`Error decoding Tempo tx ${tx.hash}:`, err);
+              }
+            }
+
             return {
               ...tx,
               timestamp,
+              calls,
             };
           } catch (err) {
-            console.error(`Error fetching block timestamp for ${tx.hash}:`, err);
+            console.error(`Error fetching details for ${tx.hash}:`, err);
             return {
               ...tx,
               timestamp: 0,
@@ -97,7 +128,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         ...data,
-        transactions: transactionsWithTimestamps,
+        transactions: transactionsWithDetails,
       });
     }
 

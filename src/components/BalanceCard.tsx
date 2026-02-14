@@ -3,6 +3,7 @@ import { GlassCard } from "./GlassCard";
 
 interface BalanceCardProps {
   balance: string;
+  symbol: string;
   walletAddress: string;
   onCopyAddress: () => void;
   loading?: boolean;
@@ -10,6 +11,7 @@ interface BalanceCardProps {
 
 export function BalanceCard({
   balance,
+  symbol,
   walletAddress,
   onCopyAddress,
   loading = false,
@@ -45,7 +47,7 @@ export function BalanceCard({
               className="text-xl font-light"
               style={{ color: "var(--text-secondary)" }}
             >
-              USDC
+              {symbol}
             </span>
           </>
         )}
@@ -83,6 +85,16 @@ export function BalanceCard({
           </svg>
         </button>
       </div>
+      {balance === "0.00" && !loading && (
+        <div className="mt-4 p-3 rounded-lg" style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)" }}>
+          <p className="text-xs" style={{ color: "#ef4444" }}>
+            Embedded wallet is empty. Send funds to:
+          </p>
+          <p className="text-xs font-mono mt-1 break-all" style={{ color: "#ef4444" }}>
+            {walletAddress}
+          </p>
+        </div>
+      )}
     </GlassCard>
     </motion.div>
   );

@@ -63,6 +63,8 @@ export function useTransactionHistory(
             blockNumber: string;
             input: string;
             timestamp: number;
+            type?: string;
+            calls?: Array<{ to: string; value?: string; data?: string }>;
             [key: string]: unknown;
           }>;
           error?: string | null;
@@ -83,13 +85,30 @@ export function useTransactionHistory(
                 ? "send"
                 : "receive";
 
-            // Parse amount from transaction value (assuming 6 decimals for USDC)
+            // Parse amount from transaction value
             // For ERC20 transfers, value is "0x0", actual amount is in the input data
             let amount = tx.value;
             let memo: string | undefined;
 
+            // Log full transaction for debugging
+            console.log("Full transaction:", tx);
+
+            // Handle Tempo 0x76 batch transactions with calls array
+            if (tx.type === "0x76" && tx.calls && tx.calls.length > 0) {
+              // Sum up all transfer amounts from calls
+              let totalAmount = 0n;
+              for (const call of tx.calls) {
+                // Parse transfer data: transfer(address,uint256) = 0xa9059cbb
+                if (call.data && call.data.startsWith("0xa9059cbb")) {
+                  const amountHex = "0x" + call.data.slice(10 + 64, 10 + 64 + 64);
+                  totalAmount += BigInt(amountHex);
+                }
+              }
+              amount = "0x" + totalAmount.toString(16);
+              console.log("Tempo batch tx total amount:", totalAmount.toString());
+            }
             // Check for transferWithMemo (function signature: 0x95777d59 on Tempo)
-            if (tx.input && tx.input.startsWith("0x95777d59")) {
+            else if (tx.input && tx.input.startsWith("0x95777d59")) {
               // transferWithMemo(address to, uint256 amount, bytes32 memo)
               try {
                 // Function selector is at chars 0-10 (0x95777d59)
