@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { formatUnits } from "viem";
 
 interface TransactionData {
@@ -28,7 +28,8 @@ export function useTransactionHistory(
   const [error, setError] = useState<string | null>(null);
   const [hasInitialFetch, setHasInitialFetch] = useState(false);
 
-  useEffect(() => {
+  // useCallback to allow manual refetching
+  const fetchTransactions = useCallback(async () => {
     if (!address) {
       setTransactions([]);
       setLoading(false);
@@ -36,150 +37,132 @@ export function useTransactionHistory(
       return;
     }
 
-    const fetchTransactions = async () => {
-      try {
-        setError(null);
+    try {
+      setError(null);
 
-        // Fetch transactions via our own API route to avoid CORS
-        const url = new URL("/api/transactions", window.location.origin);
-        url.searchParams.set("address", address);
-        url.searchParams.set("limit", "10");
-        url.searchParams.set("offset", "0");
+      // Fetch transactions via our own API route to avoid CORS
+      const url = new URL("/api/transactions", window.location.origin);
+      url.searchParams.set("address", address);
+      url.searchParams.set("limit", "10");
+      url.searchParams.set("offset", "0");
 
-        const response = await fetch(url.toString());
+      const response = await fetch(url.toString());
 
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch transactions: ${response.statusText}`
-          );
-        }
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch transactions: ${response.statusText}`
+        );
+      }
 
-        const data = (await response.json()) as {
-          transactions?: Array<{
-            hash: string;
-            from: string;
-            to: string;
-            value: string;
-            blockNumber: string;
-            input: string;
-            timestamp: number;
-            type?: string;
-            calls?: Array<{ to: string; value?: string; data?: string }>;
-            [key: string]: unknown;
-          }>;
-          error?: string | null;
-        };
+      const data = (await response.json()) as {
+        transactions?: Array<{
+          hash: string;
+          from: string;
+          to: string;
+          value: string;
+          blockNumber: string;
+          input: string;
+          timestamp: number;
+          type?: string;
+          calls?: Array<{ to: string; value?: string; data?: string }>;
+          [key: string]: unknown;
+        }>;
+        error?: string | null;
+      };
 
-        if (data.error) {
-          throw new Error(data.error);
-        }
+      if (data.error) {
+        throw new Error(data.error);
+      }
 
-        // Parse and format transactions
-        const parsedTxs: TransactionData[] = [];
+      // Parse and format transactions
+      const parsedTxs: TransactionData[] = [];
 
-        for (const tx of data.transactions || []) {
-          try {
-            // Determine transaction type
-            const type =
-              tx.from.toLowerCase() === address.toLowerCase()
-                ? "send"
-                : "receive";
+      for (const tx of data.transactions || []) {
+        try {
+          // Determine transaction type
+          const type =
+            tx.from.toLowerCase() === address.toLowerCase()
+              ? "send"
+              : "receive";
 
-            // Parse amount from transaction value
-            // For ERC20 transfers, value is "0x0", actual amount is in the input data
-            let amount = tx.value;
-            let memo: string | undefined;
+          // Parse amount from transaction value
+          let amount = tx.value;
+          let memo: string | undefined;
 
-            // Log full transaction for debugging
-            console.log("Full transaction:", tx);
-
-            // Handle Tempo 0x76 batch transactions with calls array
-            if (tx.type === "0x76" && tx.calls && tx.calls.length > 0) {
-              // Sum up all transfer amounts from calls
-              let totalAmount = 0n;
-              for (const call of tx.calls) {
-                // Parse transfer data: transfer(address,uint256) = 0xa9059cbb
-                if (call.data && call.data.startsWith("0xa9059cbb")) {
-                  const amountHex = "0x" + call.data.slice(10 + 64, 10 + 64 + 64);
-                  totalAmount += BigInt(amountHex);
-                }
-              }
-              amount = "0x" + totalAmount.toString(16);
-              console.log("Tempo batch tx total amount:", totalAmount.toString());
-            }
-            // Check for transferWithMemo (function signature: 0x95777d59 on Tempo)
-            else if (tx.input && tx.input.startsWith("0x95777d59")) {
-              // transferWithMemo(address to, uint256 amount, bytes32 memo)
-              try {
-                // Function selector is at chars 0-10 (0x95777d59)
-                // to is at chars 10-74 (64 chars = 32 bytes)
-                // amount is at chars 74-138 (64 chars = 32 bytes)
-                // memo is at chars 138-202 (64 chars = 32 bytes)
-                const amountHex = "0x" + tx.input.slice(10 + 64, 10 + 64 + 64);
-                amount = amountHex;
-
-                const memoHex =
-                  "0x" + tx.input.slice(10 + 64 + 64, 10 + 64 + 64 + 64);
-                memo = parseHexToString(memoHex);
-              } catch (e) {
-                console.error("Error parsing transferWithMemo:", e);
+          // Handle Tempo 0x76 batch transactions with calls array
+          if (tx.type === "0x76" && tx.calls && tx.calls.length > 0) {
+            let totalAmount = 0n;
+            for (const call of tx.calls) {
+              if (call.data && call.data.startsWith("0xa9059cbb")) {
+                const amountHex = "0x" + call.data.slice(10 + 64, 10 + 64 + 64);
+                totalAmount += BigInt(amountHex);
               }
             }
-            // Check for basic transfer (function signature: 0xa9059cbb)
-            else if (tx.input && tx.input.startsWith("0xa9059cbb")) {
-              // transfer(address to, uint256 amount)
-              // Function selector is at chars 0-10 (0xa9059cbb)
-              // to is at chars 10-74 (64 chars = 32 bytes)
-              // amount is at chars 74-138 (64 chars = 32 bytes)
+            amount = "0x" + totalAmount.toString(16);
+          }
+          // Check for transferWithMemo (function signature: 0x95777d59 on Tempo)
+          else if (tx.input && tx.input.startsWith("0x95777d59")) {
+            try {
               const amountHex = "0x" + tx.input.slice(10 + 64, 10 + 64 + 64);
               amount = amountHex;
+
+              const memoHex =
+                "0x" + tx.input.slice(10 + 64 + 64, 10 + 64 + 64 + 64);
+              memo = parseHexToString(memoHex);
+            } catch (e) {
+              console.error("Error parsing transferWithMemo:", e);
             }
-
-            const formattedAmount = formatUnits(BigInt(amount), 6);
-            const blockNumber = parseInt(tx.blockNumber, 16);
-
-            parsedTxs.push({
-              hash: tx.hash,
-              from: tx.from,
-              to: tx.to,
-              value: amount,
-              blockNumber,
-              timestamp: tx.timestamp || 0,
-              type,
-              amount: parseFloat(formattedAmount).toFixed(2),
-              formattedTimestamp: formatTimestamp(tx.timestamp || 0),
-              memo,
-            });
-          } catch (err) {
-            console.error("Error processing transaction:", err, tx);
           }
-        }
+          // Check for basic transfer (function signature: 0xa9059cbb)
+          else if (tx.input && tx.input.startsWith("0xa9059cbb")) {
+            const amountHex = "0x" + tx.input.slice(10 + 64, 10 + 64 + 64);
+            amount = amountHex;
+          }
 
-        setTransactions(parsedTxs);
-      } catch (err) {
-        console.error("Error fetching transactions:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch transactions"
-        );
-        setTransactions([]);
-      } finally {
-        // Only set loading to false after first successful fetch
-        if (!hasInitialFetch) {
-          setLoading(false);
-          setHasInitialFetch(true);
+          const formattedAmount = formatUnits(BigInt(amount), 6);
+          const blockNumber = parseInt(tx.blockNumber, 16);
+
+          parsedTxs.push({
+            hash: tx.hash,
+            from: tx.from,
+            to: tx.to,
+            value: amount,
+            blockNumber,
+            timestamp: tx.timestamp || 0,
+            type,
+            amount: parseFloat(formattedAmount).toFixed(2),
+            formattedTimestamp: formatTimestamp(tx.timestamp || 0),
+            memo,
+          });
+        } catch (err) {
+          // silent fail for individual tx parsing
         }
       }
-    };
 
+      setTransactions(parsedTxs);
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch transactions"
+      );
+    } finally {
+      if (!hasInitialFetch) {
+        setLoading(false);
+        setHasInitialFetch(true);
+      }
+    }
+  }, [address, hasInitialFetch]);
+
+  useEffect(() => {
     fetchTransactions();
 
     // Refresh transactions every 10 seconds to match balance refresh
     const interval = setInterval(fetchTransactions, 10000);
 
     return () => clearInterval(interval);
-  }, [address, refreshTrigger, hasInitialFetch]);
+  }, [fetchTransactions, refreshTrigger]);
 
-  return { transactions, loading, error };
+  return { transactions, loading, error, refetch: fetchTransactions };
 }
 
 function formatTimestamp(unixTimestamp: number): string {

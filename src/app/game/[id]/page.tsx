@@ -124,7 +124,9 @@ export default function GameRoomPage() {
     };
 
     const handleRollDice = async () => {
-        if (!game || game.players.length < game.minPlayers) {
+        if (!game) return;
+
+        if (game.players.length < game.minPlayers) {
             alert(`Need at least ${game.minPlayers} players to start!`);
             return;
         }
