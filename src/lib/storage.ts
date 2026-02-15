@@ -150,3 +150,36 @@ export function appendActionLog(entry: ActionLogEntry): void {
   const next = [entry, ...log].slice(0, 500);
   localStorage.setItem(ACTION_LOG_KEY, JSON.stringify(next));
 }
+
+// --- Games ---
+const GAMES_KEY = "splitease-games";
+
+export function getGames(): import("@/types/game").Game[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(GAMES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function setGames(games: import("@/types/game").Game[]): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(GAMES_KEY, JSON.stringify(games));
+}
+
+export function addGame(game: import("@/types/game").Game): void {
+  setGames([...getGames(), game]);
+}
+
+export function updateGame(id: string, updates: Partial<import("@/types/game").Game>): void {
+  setGames(
+    getGames().map((g) => (g.id === id ? { ...g, ...updates } : g))
+  );
+}
+
+export function getGameById(id: string): import("@/types/game").Game | undefined {
+  return getGames().find((g) => g.id === id);
+}
+
