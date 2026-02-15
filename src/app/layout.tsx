@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Naur",
-  description: "your money Naur",
+  title: "SplitEase",
+  description: "Split expenses, send payments, and get paid—with ease.",
 };
 
 export default function RootLayout({

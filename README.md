@@ -1,12 +1,16 @@
-# Tempo + Privy Example Project
+# SplitEase
 
-A basic example showing how to send tokens with memos on [Tempo](https://tempo.xyz) using [Privy](https://privy.io) for wallet authentication.
+Split expenses, send payments, and get paid—with ease. Built on [Tempo](https://tempo.xyz) with [Privy](https://privy.io) for wallet authentication.
 
 ## Features
 
-- **Transaction Memos**: Attach human-readable memos to token transfers
-- **Privy Authentication**: Embedded wallet creation and social login via Privy
-- **Token Transfers**: Send alphaUSD tokens to other users
+- **Wallet**: Send and receive alphaUSD, batch send, transaction memos
+- **Split (expense groups)**: Create groups, add members by email or phone, log expenses, see who owes whom, one-tap settle on Tempo
+- **Invoices & receipts**: Create invoices with a memo; when the client pays with that memo, the invoice is marked paid automatically. Invoice history and receipt view with memo reconciliation.
+- **Automatic notifications when paid**: In-app toast when you receive a payment (polling-based).
+- **Revenue splitting (collaborations)**: Define a project with total revenue and split percentages per collaborator (email/phone). Track who gets what.
+- **Time-based auto pay**: Schedule a payment to run at a specific date and time. Runs when the app tab is open (client-side check every minute).
+- **Analysis**: Summary of total sent/received and a log of actions (sends, settles, invoices, scheduled payments, group creation, etc.).
 
 ## Tech Stack
 
@@ -59,6 +63,29 @@ You can send to recipients in two ways:
 | Phone | `+14155551234` | Yes - Privy looks up or creates their wallet |
 
 When sending to an email/phone, Privy either finds the recipient's existing wallet or creates a new one. The recipient can then log in with that email/phone to access their funds.
+
+### Split (expense groups)
+
+- **Groups**: Create a group and add members by email or phone.
+- **Expenses**: Add amount, description, who paid, and who to split between.
+- **Balances**: Automatic calculation of who owes whom; one-tap settle with pre-filled send (recipient, amount, memo).
+
+### Invoices & receipts
+
+- Create an invoice with recipient, amount, description, and a **memo** (e.g. "Invoice #123"). Share the memo with the payer.
+- When someone sends you funds on Tempo with that memo, the app reconciles incoming transactions and marks the invoice as **paid**.
+- View invoice history (pending / paid) and open a **receipt** (description, amount, memo, paid date, tx link).
+
+### Auto pay
+
+- Schedule a payment (recipient, amount, memo, date and time). When the scheduled time is reached, the payment is sent automatically **if the app tab is open** (browser checks every minute).
+
+### Analysis
+
+- **Total sent / total received** from your transaction history.
+- **Activity log**: Sends, settles, invoice created, collaboration created, scheduled payments (and when they run). Stored in `localStorage` for the session.
+
+Data (groups, expenses, invoices, scheduled payments, collaborations, action log) is stored in `localStorage`. Sign in with **email or phone** so you appear as a member in groups and can use settle and analysis.
 
 ### Transaction Memos
 
